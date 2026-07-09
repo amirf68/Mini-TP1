@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSocket } from '../SocketContext';
 import Slide1LeadIn from './slides/Slide1LeadIn';
 import Slide2Vocab from './slides/Slide2Vocab';
 import Slide3Gist from './slides/Slide3Gist';
@@ -11,11 +12,17 @@ import { teacherData } from '../data';
 import { ChevronLeft, ChevronRight, Presentation as PresentationIcon, Clock } from 'lucide-react';
 
 export default function Presentation() {
-  const [currentSlide, setCurrentSlide] = useState(1);
+  const { state, setSlide, joinSession, role } = useSocket();
   const [isTeacherPanelOpen, setIsTeacherPanelOpen] = useState(false);
   
   // Global 15-minute Teacher Timer
   const [globalTimeLeft, setGlobalTimeLeft] = useState(15 * 60);
+
+  useEffect(() => {
+    if (role !== 'teacher') {
+      joinSession('teacher');
+    }
+  }, [role, joinSession]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -33,11 +40,11 @@ export default function Presentation() {
   const totalSlides = 6;
 
   const nextSlide = () => {
-    if (currentSlide < totalSlides) setCurrentSlide(curr => curr + 1);
+    if (state.currentSlide < totalSlides) setSlide(state.currentSlide + 1);
   };
 
   const prevSlide = () => {
-    if (currentSlide > 1) setCurrentSlide(curr => curr - 1);
+    if (state.currentSlide > 1) setSlide(state.currentSlide - 1);
   };
 
   const toggleTeacherPanel = () => {
@@ -45,7 +52,7 @@ export default function Presentation() {
   };
 
   const renderSlide = () => {
-    switch (currentSlide) {
+    switch (state.currentSlide) {
       case 1: return <Slide1LeadIn />;
       case 2: return <Slide2Vocab />;
       case 3: return <Slide3Gist />;
@@ -69,10 +76,10 @@ export default function Presentation() {
       </div>
 
       {/* Main Slide Area */}
-      <div className={`relative flex-1 transition-all duration-300 ${isTeacherPanelOpen ? 'mr-80' : 'mr-0'}`}>
+      <div className={`relative flex-1 transition-all duration-300 ${isTeacherPanelOpen ? 'mr-96' : 'mr-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentSlide}
+            key={state.currentSlide}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
@@ -83,41 +90,38 @@ export default function Presentation() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Presentation Controls */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-slate-700/50 z-40">
-          <button 
-            onClick={prevSlide}
-            disabled={currentSlide === 1}
-            className="text-white disabled:opacity-30 hover:text-indigo-400 transition-colors p-2 cursor-pointer"
-          >
-            <ChevronLeft size={28} />
-          </button>
-          
-          <div className="text-white font-medium flex items-center gap-4 text-sm tracking-wider uppercase px-4">
-            <div className="flex items-center gap-2">
-              <PresentationIcon size={16} className="text-indigo-400" />
-              Slide {currentSlide} of {totalSlides}
+        {/* Presentation Controls - Moved to corner to avoid blocking content */}
+        <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-40">
+          <div className="flex items-center gap-4 bg-slate-900/90 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-slate-700/50">
+            <button 
+              onClick={prevSlide}
+              disabled={state.currentSlide === 1}
+              className="text-white disabled:opacity-30 hover:text-indigo-400 transition-colors p-2 cursor-pointer"
+            >
+              <ChevronLeft size={28} />
+            </button>
+            
+            <div className="text-white font-medium flex items-center gap-4 text-sm tracking-wider uppercase px-4">
+              <div className="flex items-center gap-2">
+                <PresentationIcon size={16} className="text-indigo-400" />
+                Slide {state.currentSlide} of {totalSlides}
+              </div>
             </div>
-            <div className="w-px h-4 bg-slate-600"></div>
-            <div className="flex items-center gap-2 text-rose-300">
-              <Clock size={16} />
-              Target: {teacherData[currentSlide]?.timeAllocation || '2 mins'}
-            </div>
-          </div>
 
-          <button 
-            onClick={nextSlide}
-            disabled={currentSlide === totalSlides}
-            className="text-white disabled:opacity-30 hover:text-indigo-400 transition-colors p-2 cursor-pointer"
-          >
-            <ChevronRight size={28} />
-          </button>
+            <button 
+              onClick={nextSlide}
+              disabled={state.currentSlide === totalSlides}
+              className="text-white disabled:opacity-30 hover:text-indigo-400 transition-colors p-2 cursor-pointer"
+            >
+              <ChevronRight size={28} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Teacher Panel */}
       <TeacherPanel 
-        notes={teacherData[currentSlide]} 
+        notes={teacherData[state.currentSlide]} 
         isOpen={isTeacherPanelOpen} 
         onToggle={toggleTeacherPanel} 
       />

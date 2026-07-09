@@ -1,5 +1,6 @@
-import { CheckCircle2, MessageSquare, Play, HelpCircle, Clock } from 'lucide-react';
+import { CheckCircle2, MessageSquare, Play, HelpCircle, Clock, Users, Trophy } from 'lucide-react';
 import { TeacherNotes } from '../types';
+import { useSocket } from '../SocketContext';
 
 interface TeacherPanelProps {
   notes: TeacherNotes;
@@ -8,6 +9,9 @@ interface TeacherPanelProps {
 }
 
 export default function TeacherPanel({ notes, isOpen, onToggle }: TeacherPanelProps) {
+  const { state } = useSocket();
+  const { students } = state;
+
   if (!isOpen) {
     return (
       <button
@@ -20,8 +24,18 @@ export default function TeacherPanel({ notes, isOpen, onToggle }: TeacherPanelPr
     );
   }
 
+  // Filter and sort students
+  const coreStudentsList = students.filter(s => !s.isGuest);
+  const guestStudentsList = students.filter(s => s.isGuest);
+
+  const presentCoreStudents = coreStudentsList.filter(s => s.isOnline);
+  const absentCoreStudents = coreStudentsList.filter(s => !s.isOnline);
+
+  // Sort students for leaderboard (by score) - include guests but clearly mark them
+  const sortedLiveStudents = [...presentCoreStudents, ...guestStudentsList.filter(s => s.isOnline)].sort((a, b) => b.score - a.score);
+
   return (
-    <div className="fixed top-0 right-0 w-80 h-full bg-slate-900 text-slate-100 shadow-2xl z-50 overflow-y-auto border-l border-slate-700 flex flex-col">
+    <div className="fixed top-0 right-0 w-96 h-full bg-slate-900 text-slate-100 shadow-2xl z-50 overflow-y-auto border-l border-slate-700 flex flex-col">
       <div className="p-4 bg-slate-800 flex justify-between items-center sticky top-0 border-b border-slate-700 z-10">
         <h2 className="font-bold text-lg text-indigo-400">Teacher Notes</h2>
         <button
@@ -33,6 +47,54 @@ export default function TeacherPanel({ notes, isOpen, onToggle }: TeacherPanelPr
       </div>
 
       <div className="p-5 flex-1 space-y-6">
+        
+        {/* Student Tracker Module */}
+        <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 shadow-inner">
+          <h4 className="flex items-center gap-2 text-indigo-300 font-bold mb-3 border-b border-slate-700 pb-2">
+            <Users size={18} /> Live Students
+          </h4>
+          
+          <div className="space-y-2 mb-4">
+            {sortedLiveStudents.length === 0 && (
+              <p className="text-sm text-slate-500 italic">No one has joined yet.</p>
+            )}
+            {sortedLiveStudents.map((student, idx) => (
+              <div key={student.name} className={`flex items-center justify-between p-2 rounded-lg text-sm ${student.isGuest ? 'bg-slate-800 border border-slate-700/50' : 'bg-slate-900'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${student.isOnline ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-rose-500'}`}></div>
+                  <span className={`font-semibold flex items-center gap-1 ${student.isOnline ? 'text-slate-200' : 'text-slate-500'}`}>
+                    {student.name} {student.isGuest && <span className="text-[10px] text-slate-500 uppercase">(Guest)</span>}
+                  </span>
+                  {idx < 3 && student.score > 0 && (
+                    <Trophy size={14} className={idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-slate-300' : 'text-amber-600'} />
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-indigo-300">{student.score} pts</span>
+                  {student.hasAnsweredCurrent && (
+                    <span className="text-[10px] bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      Answered
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {absentCoreStudents.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-700/50">
+              <span className="text-xs font-bold text-rose-400 mb-2 block tracking-wider">ABSENT (Core)</span>
+              <div className="flex flex-wrap gap-1.5">
+                {absentCoreStudents.map(student => (
+                  <span key={student.name} className="text-xs bg-rose-950 text-rose-300 px-2 py-1 rounded-md border border-rose-900/50">
+                    {student.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Stage</span>
           <h3 className="text-xl font-semibold text-white">{notes.phase}</h3>
