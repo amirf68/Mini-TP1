@@ -1,0 +1,6 @@
+{
+  "name": "CELTA Mini-TP: Office Survival",
+  "description": "An interactive, gamified presentation app for a 15-minute CELTA teaching practice reading lesson (A2 Level). Includes interactive vocab matching, timers, and an integrated Teacher Panel with scripts, CCQs, and ICQs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
